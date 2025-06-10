@@ -290,3 +290,27 @@ RUN chown -R nodejs:nodejs /app
 **Impact**: OAuth clients can now be properly persisted in Docker container environment.
 
 **Key Lesson**: Always test Docker permissions for file I/O operations, especially when switching from root to non-root users in multi-stage builds.
+
+### Claude AI OAuth Debug Session (2025-06-11 Evening)
+
+**🔍 ROOT CAUSE IDENTIFIED**: Container fails to load saved OAuth clients on startup
+
+**Evidence from Production Logs**:
+- ✅ **Persistence working**: `[DEBUG OAuth] Saved 1 OAuth clients to storage` 
+- ✅ **Authorization flow working**: Claude AI auth requests successful
+- ❌ **Client credentials failing**: `grant_type: 'client_credentials'` → "Unknown client"
+- ❌ **Missing startup log**: No `[DEBUG OAuth] Loaded X OAuth clients from storage`
+
+**Technical Analysis**:
+- **Client Registration**: ✅ Works, saves to oauth_clients.json
+- **Authorization Code Flow**: ✅ Works (clients in memory from registration)
+- **Client Credentials Flow**: ❌ Fails (clients not loaded from storage on startup)
+- **Container Restart**: ❌ Loses all clients (loadClients() method failing silently)
+
+**Next Session Priority Tasks**:
+1. **Debug loadClients() method**: Why startup loading fails silently in container
+2. **Container file access**: Verify oauth_clients.json file location/permissions  
+3. **Add startup debugging**: Enhanced logs for client loading process
+4. **Test client loading**: Manual verification of storage file reading
+
+**Current Status**: OAuth persistence code is correct, but startup loading is broken in production container environment.
