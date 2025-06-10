@@ -76,7 +76,7 @@ export class OAuthServer {
       // Optional but recommended fields
       registration_endpoint: `${config.oauthIssuer}/oauth/register`,
       jwks_uri: `${config.oauthIssuer}/.well-known/jwks.json`,
-      scopes_supported: ['mcp'],
+      scopes_supported: ['mcp', 'claudeai'],
       response_types_supported: ['code'],
       response_modes_supported: ['query'],
       grant_types_supported: ['authorization_code', 'client_credentials'],
@@ -108,7 +108,7 @@ export class OAuthServer {
         type: 'oauth2',
         authorizationEndpoint: '/oauth/authorize',
         tokenEndpoint: '/oauth/token',
-        scopes: ['mcp'],
+        scopes: ['mcp', 'claudeai'],
       },
       capabilities: {
         tools: {
@@ -271,7 +271,14 @@ export class OAuthServer {
    */
   token(req: Request, res: Response) {
     try {
-      debugLog('Token request', { body: { ...req.body, client_secret: req.body.client_secret ? '[REDACTED]' : undefined }, headers: req.headers });
+      debugLog('Token request', { 
+        body: { 
+          ...req.body, 
+          client_secret: req.body.client_secret ? '[REDACTED]' : undefined,
+          code_verifier: req.body.code_verifier ? '[REDACTED]' : undefined 
+        }, 
+        headers: req.headers 
+      });
       const {
         grant_type,
         code,
@@ -283,6 +290,10 @@ export class OAuthServer {
 
       // Validate required parameters based on grant type
       if (!grant_type || !client_id) {
+        debugLog('Token request validation failed', { 
+          missing: { grant_type: !grant_type, client_id: !client_id },
+          received: { grant_type, client_id }
+        });
         return res.status(400).json({
           error: 'invalid_request',
           error_description: 'Missing required parameters: grant_type and client_id',
@@ -324,6 +335,10 @@ export class OAuthServer {
 
       // Handle Authorization Code grant type (existing logic)
       if (!code || !redirect_uri || !code_verifier) {
+        debugLog('Authorization code grant validation failed', {
+          missing: { code: !code, redirect_uri: !redirect_uri, code_verifier: !code_verifier },
+          received: { code: code ? '[PRESENT]' : undefined, redirect_uri, code_verifier: code_verifier ? '[PRESENT]' : undefined }
+        });
         return res.status(400).json({
           error: 'invalid_request',
           error_description: 'Missing required parameters for authorization_code grant',
@@ -333,6 +348,10 @@ export class OAuthServer {
       // Validate authorization code
       const authCode = this.authCodes.get(code);
       if (!authCode) {
+        debugLog('Authorization code validation failed', { 
+          code: code ? '[PRESENT]' : 'MISSING',
+          availableCodes: Array.from(this.authCodes.keys()).length
+        });
         return res.status(400).json({
           error: 'invalid_grant',
           error_description: 'Invalid or expired authorization code',
