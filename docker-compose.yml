@@ -14,6 +14,11 @@ services:
       - "3001:3001"
     env_file:
       - .env
+    environment:
+      # Server Configuration (non-sensitive)
+      - NODE_ENV=production
+      - PORT=3001
+      - LOG_LEVEL=debug
     volumes:
       # Optional: Mount logs directory
       - ./logs:/app/logs
