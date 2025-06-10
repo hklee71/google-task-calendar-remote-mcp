@@ -42,6 +42,9 @@ COPY --from=builder /app/build ./build
 # Copy any additional files needed
 COPY --chown=nodejs:nodejs package.json ./
 
+# Ensure nodejs user has write permissions for OAuth persistence
+RUN chown -R nodejs:nodejs /app
+
 # Switch to non-root user
 USER nodejs
 
