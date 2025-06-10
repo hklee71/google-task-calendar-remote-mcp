@@ -12,23 +12,6 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
-    environment:
-      # Server configuration
-      NODE_ENV: production
-      PORT: 3001
-      LOG_LEVEL: info
-      
-      # CORS configuration (adjust for your Claude AI setup)
-      ALLOWED_ORIGINS: "https://claude.ai,http://localhost:3000"
-      
-      # OAuth 2.1 configuration
-      OAUTH_ISSUER: "http://localhost:3001"
-      # SESSION_SECRET: "your-32-plus-character-secret-here"
-      
-      # Google API credentials (set these in your .env file or environment)
-      # GOOGLE_CLIENT_ID: "your-google-client-id"
-      # GOOGLE_CLIENT_SECRET: "your-google-client-secret"
-      # GOOGLE_REFRESH_TOKEN: "your-google-refresh-token"
     env_file:
       - .env
     volumes:
@@ -36,12 +19,6 @@ services:
       - ./logs:/app/logs
     networks:
       - mcp-network
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   mcp-network:
