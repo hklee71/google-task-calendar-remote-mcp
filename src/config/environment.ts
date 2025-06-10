@@ -6,6 +6,7 @@
  */
 
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -100,5 +101,4 @@ export function logConfiguration() {
 }
 
 // Re-export crypto for other modules that need it
-import crypto from 'crypto';
 export { crypto };

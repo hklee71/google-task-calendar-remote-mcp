@@ -82,8 +82,8 @@ app.get('/.well-known/mcp', (req, res) => {
 });
 
 // OAuth 2.1 endpoints
-app.post('/oauth/register', (req, res) => {
-  oauthServer.registerClient(req, res);
+app.post('/oauth/register', async (req, res) => {
+  await oauthServer.registerClient(req, res);
 });
 
 app.get('/oauth/authorize', (req, res) => {

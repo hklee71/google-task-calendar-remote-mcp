@@ -7,6 +7,7 @@
 
 import crypto from 'crypto';
 import { Request, Response } from 'express';
+import { promises as fs } from 'fs';
 import { config } from '../config/environment.js';
 
 // Enhanced logging function
@@ -54,12 +55,43 @@ export class OAuthServer {
     client_id: string;
     expires_at: number;
   }> = new Map();
+  
+  private readonly storageFile = './oauth_clients.json';
 
   constructor() {
+    // Load existing clients on startup
+    this.loadClients().catch(err => {
+      debugLog('Failed to load clients on startup:', err.message);
+    });
+    
     // Clean up expired codes and tokens every 5 minutes
     setInterval(() => {
       this.cleanupExpired();
     }, 5 * 60 * 1000);
+  }
+
+  private async loadClients(): Promise<void> {
+    try {
+      const data = await fs.readFile(this.storageFile, 'utf8');
+      const clientsData = JSON.parse(data);
+      this.clients = new Map(Object.entries(clientsData));
+      debugLog(`Loaded ${this.clients.size} OAuth clients from storage`);
+    } catch (error: any) {
+      if (error.code !== 'ENOENT') {
+        debugLog('Error loading clients:', error.message);
+      }
+      // File doesn't exist or is invalid - start fresh
+    }
+  }
+
+  private async saveClients(): Promise<void> {
+    try {
+      const clientsData = Object.fromEntries(this.clients);
+      await fs.writeFile(this.storageFile, JSON.stringify(clientsData, null, 2), 'utf8');
+      debugLog(`Saved ${this.clients.size} OAuth clients to storage`);
+    } catch (error: any) {
+      debugLog('Error saving clients:', error.message);
+    }
   }
 
   /**
@@ -123,7 +155,7 @@ export class OAuthServer {
    * Register a new OAuth client
    * Dynamic client registration per OAuth 2.1
    */
-  registerClient(req: Request, res: Response) {
+  async registerClient(req: Request, res: Response) {
     try {
       debugLog('Client registration attempt', { body: req.body, headers: req.headers });
       const { client_name, redirect_uris } = req.body;
@@ -166,6 +198,9 @@ export class OAuthServer {
       };
 
       this.clients.set(client_id, client);
+      
+      // Save clients to persistent storage
+      await this.saveClients();
 
       return res.json({
         client_id,
