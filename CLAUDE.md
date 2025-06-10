@@ -265,3 +265,28 @@ Remember: This project creates a NEW remote server while keeping the existing lo
 
 ### Docker Build Testing
 - Always test and ensure local docker build is successfully before commit.
+
+### OAuth Persistence Issue Resolution (2025-06-11)
+
+**Issue**: Claude AI "Unknown client" error persisted after persistence fix deployment.
+
+**Root Cause**: Docker container permission issue preventing OAuth client file creation:
+```
+[DEBUG OAuth] Error saving clients: EACCES: permission denied, open './oauth_clients.json'
+```
+
+**Analysis**: 
+- OAuth persistence code was correct
+- Local testing worked (file created successfully)
+- Production Docker container running as `nodejs` user (UID 1001) lacked write permissions
+- Container could read existing clients but couldn't persist new registrations
+
+**Solution**: Added proper ownership in Dockerfile:
+```dockerfile
+# Ensure nodejs user has write permissions for OAuth persistence  
+RUN chown -R nodejs:nodejs /app
+```
+
+**Impact**: OAuth clients can now be properly persisted in Docker container environment.
+
+**Key Lesson**: Always test Docker permissions for file I/O operations, especially when switching from root to non-root users in multi-stage builds.
