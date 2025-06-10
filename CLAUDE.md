@@ -226,3 +226,11 @@ Remember: This project creates a NEW remote server while keeping the existing lo
 - No logs captured when Claude AI connects (suggests early rejection)
 
 **Next Steps**: Fix OAuth implementation gaps to achieve full MCP 2025-03-26 compliance
+
+## Additional Notes
+
+### Commit Guidelines
+- Do not add these commit messages to project git commits:
+  * "🤖 Generated with [Claude Code](https://claude.ai/code)"
+  * "Co-Authored-By: Claude <noreply@anthropic.com>"
+- These are unnecessary information to check in
