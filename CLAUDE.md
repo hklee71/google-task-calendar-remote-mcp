@@ -183,3 +183,46 @@ cd ../google-task-calendar && npm test
 ```
 
 Remember: This project creates a NEW remote server while keeping the existing local server perfectly safe and unchanged.
+
+## Current Status and TODO List
+
+### Deployment Status
+✅ **Successfully deployed to Synology NAS with Cloudflare Tunnel**
+- Container running healthy at https://task.wandermusings.com
+- All 10 Google API tools operational
+- Health checks passing
+- Discovery endpoints responding correctly
+
+### Fixed Issues
+✅ Docker health check failures (removed conflicting curl dependency)
+✅ Environment variable conflicts (removed hardcoded environment section from docker-compose.yml)  
+✅ OAuth issuer configuration (corrected to use HTTPS)
+✅ Container Manager deployment process documented
+
+### Current TODO List - OAuth MCP 2025-03-26 Compliance Issues
+
+**HIGH PRIORITY:**
+- [ ] Fix redirect URI validation to only allow localhost or HTTPS URLs per MCP spec (currently allows HTTP)
+- [ ] Add Client Credentials grant type support as required by MCP spec (currently only has authorization_code)
+- [ ] Enable debug logging (LOG_LEVEL=debug) to capture Claude AI connection attempts
+- [ ] Test Claude AI connection after OAuth fixes
+
+**MEDIUM PRIORITY:**
+- [ ] Update OAuth discovery metadata to be fully RFC8414 compliant (missing some required fields)
+- [ ] Add fallback URL handling for non-RFC8414 compliant clients
+
+### Key Findings - Claude AI Connection Issue
+
+**Root Cause**: OAuth implementation not fully compliant with MCP 2025-03-26 specification
+- **Current Error**: "Missing required parameters" when Claude AI attempts authorization
+- **Spec Gap**: Redirect URI validation too permissive (allows HTTP, should only allow HTTPS/localhost)
+- **Missing Feature**: Client Credentials grant type required by MCP spec
+- **Discovery Issue**: OAuth metadata may not be fully RFC8414 compliant
+
+**Analysis**: 
+- Basic endpoints working (health, discovery respond correctly)
+- OAuth registration works via curl tests
+- Authorization endpoint fails with parameter validation
+- No logs captured when Claude AI connects (suggests early rejection)
+
+**Next Steps**: Fix OAuth implementation gaps to achieve full MCP 2025-03-26 compliance

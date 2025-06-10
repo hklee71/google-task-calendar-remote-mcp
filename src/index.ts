@@ -408,9 +408,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // SSE endpoint for MCP transport with OAuth validation
 app.get('/sse', (req, res) => {
+  // Debug logging for Claude AI connection attempts
+  if (config.logLevel === 'debug') {
+    console.log('[DEBUG SSE] Connection attempt', {
+      headers: req.headers,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      timestamp: new Date().toISOString()
+    });
+  }
+  
   // Extract and validate OAuth token
   const token = oauthServer.extractToken(req.headers.authorization);
   if (!token) {
+    console.log('[ERROR SSE] Missing authorization header');
     return res.status(401).json({
       error: 'unauthorized',
       error_description: 'Missing or invalid authorization header',

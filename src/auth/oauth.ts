@@ -9,6 +9,13 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { config } from '../config/environment.js';
 
+// Enhanced logging function
+function debugLog(message: string, ...args: any[]) {
+  if (config.logLevel === 'debug') {
+    console.log(`[DEBUG OAuth] ${message}`, ...args);
+  }
+}
+
 export interface OAuthClient {
   client_id: string;
   client_name: string;
@@ -27,11 +34,12 @@ export interface AuthorizationRequest {
 }
 
 export interface TokenRequest {
-  grant_type: 'authorization_code';
-  code: string;
-  redirect_uri: string;
+  grant_type: 'authorization_code' | 'client_credentials';
+  code?: string;
+  redirect_uri?: string;
   client_id: string;
-  code_verifier: string;
+  code_verifier?: string;
+  client_secret?: string;
 }
 
 export class OAuthServer {
@@ -56,20 +64,31 @@ export class OAuthServer {
 
   /**
    * OAuth 2.1 Discovery Endpoint
-   * Returns server metadata for auto-discovery
+   * Returns server metadata for auto-discovery (RFC8414 compliant)
    */
   getDiscoveryDocument() {
     return {
+      // Required fields per RFC8414
       issuer: config.oauthIssuer,
-      authorization_endpoint: '/oauth/authorize',
-      token_endpoint: '/oauth/token',
-      registration_endpoint: '/oauth/register',
+      authorization_endpoint: `${config.oauthIssuer}/oauth/authorize`,
+      token_endpoint: `${config.oauthIssuer}/oauth/token`,
+      
+      // Optional but recommended fields
+      registration_endpoint: `${config.oauthIssuer}/oauth/register`,
+      jwks_uri: `${config.oauthIssuer}/.well-known/jwks.json`,
       scopes_supported: ['mcp'],
       response_types_supported: ['code'],
-      grant_types_supported: ['authorization_code'],
+      response_modes_supported: ['query'],
+      grant_types_supported: ['authorization_code', 'client_credentials'],
+      token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
       code_challenge_methods_supported: ['S256'],
-      token_endpoint_auth_methods_supported: ['none'],
       subject_types_supported: ['public'],
+      
+      // Additional OAuth 2.1 / MCP specific fields
+      revocation_endpoint: `${config.oauthIssuer}/oauth/revoke`,
+      introspection_endpoint: `${config.oauthIssuer}/oauth/introspect`,
+      service_documentation: `${config.oauthIssuer}/.well-known/mcp`,
+      ui_locales_supported: ['en'],
     };
   }
 
@@ -106,6 +125,7 @@ export class OAuthServer {
    */
   registerClient(req: Request, res: Response) {
     try {
+      debugLog('Client registration attempt', { body: req.body, headers: req.headers });
       const { client_name, redirect_uris } = req.body;
 
       if (!client_name || !redirect_uris || !Array.isArray(redirect_uris)) {
@@ -115,17 +135,24 @@ export class OAuthServer {
         });
       }
 
-      // Validate redirect URIs
+      // Validate redirect URIs per MCP 2025-03-26 spec
+      // Only allow HTTPS URLs or localhost URLs (including http://localhost)
       for (const uri of redirect_uris) {
         try {
           const url = new URL(uri);
-          if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-            throw new Error('Invalid protocol');
+          const isHttps = url.protocol === 'https:';
+          const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+          
+          if (!isHttps && !isLocalhost) {
+            return res.status(400).json({
+              error: 'invalid_redirect_uri',
+              error_description: `Redirect URI must be HTTPS or localhost: ${uri}`,
+            });
           }
         } catch (error) {
           return res.status(400).json({
             error: 'invalid_redirect_uri',
-            error_description: `Invalid redirect URI: ${uri}`,
+            error_description: `Invalid redirect URI format: ${uri}`,
           });
         }
       }
@@ -161,6 +188,7 @@ export class OAuthServer {
    */
   authorize(req: Request, res: Response) {
     try {
+      debugLog('Authorization request', { query: req.query, headers: req.headers });
       const {
         client_id,
         response_type,
@@ -243,26 +271,62 @@ export class OAuthServer {
    */
   token(req: Request, res: Response) {
     try {
+      debugLog('Token request', { body: { ...req.body, client_secret: req.body.client_secret ? '[REDACTED]' : undefined }, headers: req.headers });
       const {
         grant_type,
         code,
         redirect_uri,
         client_id,
         code_verifier,
+        client_secret,
       } = req.body;
 
-      // Validate required parameters
-      if (!grant_type || !code || !redirect_uri || !client_id || !code_verifier) {
+      // Validate required parameters based on grant type
+      if (!grant_type || !client_id) {
         return res.status(400).json({
           error: 'invalid_request',
-          error_description: 'Missing required parameters',
+          error_description: 'Missing required parameters: grant_type and client_id',
         });
       }
 
-      if (grant_type !== 'authorization_code') {
+      if (grant_type !== 'authorization_code' && grant_type !== 'client_credentials') {
         return res.status(400).json({
           error: 'unsupported_grant_type',
-          error_description: 'Only authorization code grant is supported',
+          error_description: 'Supported grant types: authorization_code, client_credentials',
+        });
+      }
+
+      // Handle Client Credentials grant type
+      if (grant_type === 'client_credentials') {
+        // Validate client exists
+        const client = this.clients.get(client_id);
+        if (!client) {
+          return res.status(400).json({
+            error: 'invalid_client',
+            error_description: 'Unknown client',
+          });
+        }
+
+        // Generate access token for client credentials flow
+        const access_token = crypto.randomBytes(32).toString('hex');
+        this.tokens.set(access_token, {
+          client_id,
+          expires_at: Date.now() + 60 * 60 * 1000, // 1 hour
+        });
+
+        return res.json({
+          access_token,
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'mcp',
+        });
+      }
+
+      // Handle Authorization Code grant type (existing logic)
+      if (!code || !redirect_uri || !code_verifier) {
+        return res.status(400).json({
+          error: 'invalid_request',
+          error_description: 'Missing required parameters for authorization_code grant',
         });
       }
 
