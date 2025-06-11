@@ -149,6 +149,7 @@ export class OAuthServer {
       response_modes_supported: ['query'],
       grant_types_supported: ['authorization_code', 'client_credentials'],
       token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
+      registration_endpoint_auth_methods_supported: ['none'],
       code_challenge_methods_supported: ['S256'],
       subject_types_supported: ['public'],
       
