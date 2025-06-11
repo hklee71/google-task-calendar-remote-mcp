@@ -8,9 +8,11 @@
     "google-task-calendar-remote": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "tsc && chmod +x build/index.js && chmod +x build/modern-server.js",
     "dev": "tsc --watch & nodemon build/index.js",
+    "dev:modern": "tsc --watch & nodemon build/modern-server.js",
     "start": "node build/index.js",
+    "start:modern": "node build/modern-server.js",
     "test": "jest",
     "test:unit": "jest --testPathPattern=tests/unit",
     "test:integration": "jest --testPathPattern=tests/integration",
@@ -42,7 +44,7 @@
     "@types/jest": "^29.5.5",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.24",
-    "@types/uuid": "^9.0.7",
+    "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
     "eslint": "^8.57.0",

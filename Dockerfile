@@ -58,5 +58,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "build/index.js"]
+# Start the modern MCP server (2025-03-26 specification)
+CMD ["node", "build/modern-server.js"]

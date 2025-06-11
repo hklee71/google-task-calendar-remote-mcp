@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MCP Inspector Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 MCP Inspector Connection Test</h1>
+    
+    <div class="info status">
+        <strong>Your Remote MCP Server:</strong> https://task.wandermusings.com<br>
+        <strong>Target Date:</strong> Tomorrow (June 11, 2025)
+    </div>
+
+    <h2>Connection Options</h2>
+    
+    <button onclick="testIPv6()">Test IPv6 Connection</button>
+    <button onclick="testIPv4()">Test IPv4 Connection</button>
+    <button onclick="testLocalhost()">Test Localhost</button>
+    <button onclick="testRemoteServer()">Test Remote Server</button>
+    
+    <div id="results"></div>
+
+    <h2>Manual Calendar Query</h2>
+    <p>If the MCP Inspector isn't working, you can test your server manually:</p>
+    
+    <h3>Tomorrow's Events Query</h3>
+    <pre id="queryExample">{
+  "tool": "list_events",
+  "parameters": {
+    "calendarId": "primary",
+    "timeMin": "2025-06-11T00:00:00Z",
+    "timeMax": "2025-06-11T23:59:59Z",
+    "maxResults": 20
+  }
+}</pre>
+
+    <h3>Alternative Testing Methods</h3>
+    <div class="info status">
+        <strong>Option 1: Claude Desktop</strong><br>
+        Add to config: <code>{"command": "npx", "args": ["mcp-remote", "https://task.wandermusings.com/sse"]}</code>
+        
+        <br><br><strong>Option 2: Direct API Test</strong><br>
+        Use curl or Postman to test the OAuth flow and tool calls
+        
+        <br><br><strong>Option 3: WSL Network Fix</strong><br>
+        If on WSL, the Inspector might need different network configuration
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function testIPv6() {
+            addResult('Testing IPv6 connection to [::1]:6274...', 'info');
+            fetch('http://[::1]:6274/')
+                .then(response => {
+                    addResult(`✅ IPv6 connection successful! Status: ${response.status}`, 'success');
+                    return response.text();
+                })
+                .then(data => {
+                    addResult(`Response preview: ${data.substring(0, 100)}...`, 'success');
+                })
+                .catch(error => {
+                    addResult(`❌ IPv6 connection failed: ${error.message}`, 'error');
+                });
+        }
+
+        function testIPv4() {
+            addResult('Testing IPv4 connection to 127.0.0.1:6274...', 'info');
+            fetch('http://127.0.0.1:6274/')
+                .then(response => {
+                    addResult(`✅ IPv4 connection successful! Status: ${response.status}`, 'success');
+                    return response.text();
+                })
+                .then(data => {
+                    addResult(`Response preview: ${data.substring(0, 100)}...`, 'success');
+                })
+                .catch(error => {
+                    addResult(`❌ IPv4 connection failed: ${error.message}`, 'error');
+                });
+        }
+
+        function testLocalhost() {
+            addResult('Testing localhost connection...', 'info');
+            fetch('http://localhost:6274/')
+                .then(response => {
+                    addResult(`✅ Localhost connection successful! Status: ${response.status}`, 'success');
+                    window.open('http://localhost:6274/', '_blank');
+                })
+                .catch(error => {
+                    addResult(`❌ Localhost connection failed: ${error.message}`, 'error');
+                });
+        }
+
+        function testRemoteServer() {
+            addResult('Testing remote MCP server health...', 'info');
+            fetch('https://task.wandermusings.com/health')
+                .then(response => response.json())
+                .then(data => {
+                    addResult(`✅ Remote server healthy: ${JSON.stringify(data)}`, 'success');
+                })
+                .catch(error => {
+                    addResult(`❌ Remote server test failed: ${error.message}`, 'error');
+                });
+        }
+    </script>
+</body>
+</html>

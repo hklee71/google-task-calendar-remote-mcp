@@ -32,6 +32,7 @@ export interface ServerConfig {
  * Validate and parse environment variables
  */
 function validateEnvironment(): ServerConfig {
+  console.log('🔧 Starting environment validation...');
   const errors: string[] = [];
 
   // Required Google API credentials
@@ -67,6 +68,8 @@ function validateEnvironment(): ServerConfig {
     errors.forEach(error => console.error(`  - ${error}`));
     process.exit(1);
   }
+  
+  console.log('✅ Environment validation completed successfully');
 
   return {
     port,
